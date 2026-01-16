@@ -1,0 +1,17 @@
+.DS_Store
+.env
+.env.*.local
+
+node_modules/
+.pnpm-store/
+.turbo/
+.vercel/
+
+dist/
+build/
+.cache/
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
