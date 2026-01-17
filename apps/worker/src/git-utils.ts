@@ -13,9 +13,27 @@ export const initRepo = async (cwd: string, authorName: string, authorEmail: str
   await runGit(['config', 'user.email', authorEmail], cwd)
 }
 
+export const ensureGitIdentity = async (
+  cwd: string,
+  authorName: string,
+  authorEmail: string
+) => {
+  await runGit(['config', 'user.name', authorName], cwd)
+  await runGit(['config', 'user.email', authorEmail], cwd)
+}
+
+const hasChanges = async (cwd: string) => {
+  const { stdout } = await execFileAsync('git', ['status', '--porcelain'], { cwd })
+  return stdout.trim().length > 0
+}
+
 export const commitAll = async (cwd: string, message: string) => {
+  if (!(await hasChanges(cwd))) {
+    return false
+  }
   await runGit(['add', '.'], cwd)
   await runGit(['commit', '-m', message], cwd)
+  return true
 }
 
 export const addRemote = async (cwd: string, remote: string, url: string) => {

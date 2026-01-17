@@ -680,7 +680,7 @@
 * End-to-end: trigger → experiment → winner → promote.
 
 **Update plan:** ✅.
-* Notes: worker job handler updates site.config.json and redeploys; PostHog result reading pending.
+* Notes: worker job handler updates site.config.json and redeploys; promote endpoint added with PostHog winner check.
 
 ---
 

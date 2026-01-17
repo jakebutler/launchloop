@@ -43,3 +43,19 @@ export const getMetricsSnapshot = async (projectId: string) => {
     geo: []
   }
 }
+
+export const getExperimentWinner = async (projectId: string) => {
+  const response = await posthogFetch(`/api/projects/${projectId}/experiments/`)
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(`PostHog experiments fetch failed: ${response.status} ${text}`)
+  }
+
+  const data = (await response.json()) as { results?: { key: string; winner?: string }[] }
+  const experiment = data.results?.[0]
+  if (!experiment?.winner) {
+    return null
+  }
+
+  return experiment.winner === 'variant-B' ? 'B' : 'A'
+}

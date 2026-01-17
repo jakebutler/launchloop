@@ -125,5 +125,5 @@ export const getExperiments = async (projectId: string) => {
     throw new Error(`Worker experiments failed: ${response.status} ${text}`)
   }
 
-  return response.json()
+  return response.json() as Promise<{ experiments: { id: string }[] }>
 }

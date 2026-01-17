@@ -50,6 +50,9 @@ curl -X POST "http://localhost:3001/api/signals/web-chat" -H "Authorization: Bea
 # Fetch experiments for a project (replace <PROJECT_ID>).
 curl -H "Authorization: Bearer 36b4a4848e83ccda5e31eb9f85971f7723ac67764df459c44cb17b8afb1dbb8e" "http://localhost:3001/api/projects/<PROJECT_ID>/experiments"
 
+# Promote latest experiment winner (requires PostHog winner).
+curl -X POST "http://localhost:3001/api/projects/91686a4f-73e8-4499-bb19-12e1f689fb1e/promote" -H "Authorization: Bearer 36b4a4848e83ccda5e31eb9f85971f7723ac67764df459c44cb17b8afb1dbb8e"
+
 # Test commands for proj_test_123
 # Enqueue a bootstrap landing repo job (creates a GitHub repo named launchloop-<PROJECT_ID>).
 curl -X POST "http://localhost:3002/worker/jobs" -H "X-Worker-Secret: 2112d0c824073e7ed1df0769ae1976da32af46ccbfc19b77b90368273b292ab9" -H "Content-Type: application/json" -d '{"type":"BOOTSTRAP_LANDING_REPO","projectId":"proj_test_123","payload":{"siteConfig":{"archetype":"single-cta","productName":"LaunchLoop","tagline":"Launch faster with autonomous growth loops","ctaLabel":"Join waitlist","heroDescription":"Generate, deploy, and optimize landing pages with continuous learning.","sections":[{"title":"Autopilot experiments","body":"Run headline and hero tests that improve conversion without manual effort."},{"title":"Live metrics","body":"Track sessions, clicks, and qualified leads in one dashboard."}]}}}'

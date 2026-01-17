@@ -2,7 +2,7 @@ import crypto from 'crypto'
 import express, { Request, Response } from 'express'
 import { createProjectSchema, signalPayloadSchema } from '@launchloop/shared'
 import { callRetoolAgent } from './retool-agent-client'
-import { getMetricsSnapshot } from './posthog-adapter'
+import { getExperimentWinner, getMetricsSnapshot } from './posthog-adapter'
 import { createProject, enqueueJob, getActivity, getExperiments, getProject } from './worker-client'
 import { config } from './config'
 
@@ -98,6 +98,43 @@ app.get('/api/projects/:id/experiments', requireApiAuth, async (req, res) => {
   try {
     const experiments = await getExperiments(req.params.id)
     res.json(experiments)
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message })
+  }
+})
+
+app.post('/api/projects/:id/promote', requireApiAuth, async (req, res) => {
+  try {
+    const project = await getProject(req.params.id)
+    if (!project?.repo) {
+      res.status(400).json({ error: 'Project repo is not set yet' })
+      return
+    }
+
+    const experiments = await getExperiments(req.params.id)
+    const latest = experiments.experiments?.[0]
+    if (!latest) {
+      res.status(400).json({ error: 'No experiments to promote' })
+      return
+    }
+
+    const winner = await getExperimentWinner(config.posthogProjectId)
+    if (!winner) {
+      res.status(400).json({ error: 'No experiment winner yet' })
+      return
+    }
+
+    const job = await enqueueJob({
+      type: 'PROMOTE_WINNER',
+      projectId: req.params.id,
+      payload: {
+        repo: project.repo,
+        winner,
+        experimentId: latest.id
+      }
+    })
+
+    res.json({ winner, job })
   } catch (error) {
     res.status(500).json({ error: (error as Error).message })
   }

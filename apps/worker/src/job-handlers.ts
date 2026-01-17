@@ -5,9 +5,9 @@ import { createRepo } from './github-adapter'
 import { updateJobOutput } from './job-store'
 import { config } from './config'
 import { copyTemplateSeed, ensureRepoCheckout, ensureWorkspace } from './workspace'
-import { addRemote, commitAll, initRepo, pushMain } from './git-utils'
+import { addRemote, commitAll, ensureGitIdentity, initRepo, pushMain } from './git-utils'
 import { createDeployment, createProject } from './vercel-adapter'
-import { createExperiment } from './experiment-store'
+import { createExperiment, setExperimentWinner } from './experiment-store'
 import { setProjectRepo } from './project-store'
 
 const writeSiteConfig = async (
@@ -91,16 +91,24 @@ export const handleCreateExperimentVariant = async (job: WorkerJob) => {
 
   await fs.promises.writeFile(configPath, JSON.stringify(siteConfig, null, 2))
 
-  await commitAll(workspacePath, 'feat: add experiment variant')
-  await pushMain(workspacePath, 'origin')
+  await ensureGitIdentity(workspacePath, config.gitAuthorName, config.gitAuthorEmail)
+  const committed = await commitAll(workspacePath, 'feat: add experiment variant')
+  if (committed) {
+    await pushMain(workspacePath, 'origin')
+  }
 
-  createExperiment(job.projectId, {
-    type: 'headline-hero',
-    variants: [
-      { id: 'A', headline: variantAHeadline, heroImageUrl: '' },
-      { id: 'B', headline: variantBHeadline, heroImageUrl: '' }
-    ]
-  })
+  const shouldCreateExperiment =
+    variantAHeadline.trim().length > 0 && variantAHeadline.trim() !== variantBHeadline.trim()
+
+  if (shouldCreateExperiment) {
+    createExperiment(job.projectId, {
+      type: 'headline-hero',
+      variants: [
+        { id: 'A', headline: variantAHeadline, heroImageUrl: '' },
+        { id: 'B', headline: variantBHeadline, heroImageUrl: '' }
+      ]
+    })
+  }
 
   const project = await createProject(repo.name, repo)
   const deployment = await createDeployment(repo)
@@ -115,5 +123,18 @@ export const handlers: Record<WorkerJob['type'], (job: WorkerJob) => Promise<any
   DEPLOY_LANDING_REPO: handleDeployLandingRepo,
   UPDATE_LANDING_COPY: async () => ({ skipped: true }),
   CREATE_EXPERIMENT_VARIANT: handleCreateExperimentVariant,
-  PROMOTE_WINNER: async () => ({ skipped: true })
+  PROMOTE_WINNER: async (job: WorkerJob) => {
+    const payload = job.payload as {
+      repo: { owner: string; name: string }
+      winner: 'A' | 'B'
+      experimentId: string
+    }
+
+    if (!payload?.repo?.owner || !payload?.repo?.name || !payload.winner || !payload.experimentId) {
+      throw new Error('Missing winner payload')
+    }
+
+    setExperimentWinner(payload.experimentId, payload.winner)
+    return { promoted: payload.winner }
+  }
 }

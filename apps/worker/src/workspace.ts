@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { config } from './config'
-import { cloneRepo } from './git-utils'
+import { cloneRepo, ensureGitIdentity } from './git-utils'
 
 export const getWorkspacePath = (projectId: string) =>
   path.join(config.workspaceRoot, projectId)
@@ -41,4 +41,5 @@ export const ensureRepoCheckout = async (
 
   const url = `https://x-access-token:${config.githubToken}@github.com/${repo.owner}/${repo.name}.git`
   await cloneRepo(url, workspacePath)
+  await ensureGitIdentity(workspacePath, config.gitAuthorName, config.gitAuthorEmail)
 }
