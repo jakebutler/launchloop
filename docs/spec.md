@@ -53,16 +53,18 @@ Steps:
      * Story-driven long-form
      * Comparison/feature-heavy
    * Button: **“Auto-fill with AI”** (generates intelligent defaults for all fields from the product description; user can edit)
+   * Auto-fill can include competitor context (TinyFish)
 2. **Connections**
 
    * GitHub connection (create-new repo only; write access)
    * Vercel connection (deploy access; *.vercel.app only for MVP)
    * PostHog connection (project key)
-   * Sponsor tools (keys): Freepik, TinyFish, Yutori, Tonic (optional in UX, required for hack submission)
+   * Sponsor tools (keys): Anthropic, Freepik, TinyFish, Yutori, Tonic (optional in UX, required for hack submission)
+   * Retool Agent connection (decision layer; configured via email/web chat trigger)
 3. **Permissions & automation level**
 
    * Default mode: **Full Agent (Autopilot)**
-   * Toggle to downgrade to Recommendation-only
+   * Toggle to downgrade to Recommendation-only (post-MVP; MVP uses kill switch only)
    * Autopilot scope (MVP):
 
      * Create A/B tests
@@ -88,6 +90,7 @@ Output of wizard:
 * Current experiment: variant A/B, status, winner (if any)
 * Next recommended actions (ranked)
 * **Live activity feed** (research → build → deploy → experiment → promote)
+* Decision agent status (last decision, confidence)
 
 ### 6.3 Launch workflow (first deploy)
 
@@ -121,6 +124,7 @@ A page showing:
   * “Create A/B test” (PostHog)
   * “Apply winning variant to prod”
   * “Pause Full Agent”
+  * “Decision Agent status” (read-only)
 
 ### 6.5 Founder updates (notifications)
 
@@ -158,17 +162,19 @@ Delivery (MVP):
 
 1. PostHog streams page + form events
 2. LaunchLoop monitoring evaluates metrics on a schedule
-3. LaunchLoop posts an update with recommendations
-4. User approves or ignores
+3. Retool Agent evaluates the trigger and recommends action
+4. LaunchLoop posts an update with recommendations
+5. User approves or ignores
 
 ### 7.3 Monitoring → auto-apply
 
 1. Autopilot enabled + scoped
 2. Trigger condition met (e.g., low conversion)
-3. LaunchLoop creates a change proposal (diff + rationale)
-4. If within scope, LaunchLoop auto-applies (or runs A/B)
-5. PostHog measures result
-6. Update posted
+3. Retool Agent proposes change (headline + hero) using PostHog + competitor data
+4. LaunchLoop creates a change proposal (diff + rationale)
+5. If within scope, LaunchLoop auto-applies (or runs A/B)
+6. PostHog measures result
+7. Update posted
 
 ## 8. Data collected & displayed (UX-level)
 
@@ -190,6 +196,7 @@ Delivery (MVP):
 * Repo creation is **create-new only** for MVP.
 * Lead storage for MVP is **PostHog-only** (email captured as event property).
 * Trigger heuristics (locked): **low conversion rate**, **form abandonment**, **geo-skew**.
+* Decision layer (MVP): Retool Agent via email/web chat triggers (web chat for manual testing).
 
 ## 10. Hard tech-stack decisions (locked)
 

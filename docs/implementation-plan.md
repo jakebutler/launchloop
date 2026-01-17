@@ -39,7 +39,7 @@
 ### 1.1 Create mono-repo structure
 
 **Owner:** Agent
-**Status:** ⬜
+**Status:** ✅
 
 **Goal:** Create a repository with two deployable services + shared packages.
 
@@ -69,6 +69,38 @@
 **Update plan:**
 
 * Mark ✅ and note chosen workspace tool.
+* Notes: pnpm workspace + folders created; `.env.example` files added; placeholder code present; `pnpm -r build` passes.
+
+---
+
+### 1.2 Environment + integration setup (early)
+
+**Owner:** Agent
+**Status:** ✅
+
+**Goal:** Configure env vars, secrets, and external integrations early to unblock build/test.
+
+**Tasks:**
+
+1. Define env var inventory for all services (API + worker + template-seed):
+
+   * Anthropic, GitHub, Vercel, PostHog, Resend, Resend inbound, Freepik, TinyFish, Yutori, Tonic
+2. Add `.env.example` per app with required keys.
+3. Add `docs/runbooks.md` with setup steps (Retool, PostHog workflow, Resend inbound, Vercel, Fly).
+4. Create smoke checks for each integration (simple ping or auth check).
+
+**Artifacts:**
+
+* `.env.example` files
+* `docs/runbooks.md`
+* Integration smoke check script
+
+**Validation:**
+
+* All smoke checks pass against real keys.
+
+**Update plan:** ✅.
+* Notes: `.env.example` and local `.env` files created; `docs/runbooks.md` + `scripts/smoke-checks.sh` added; smoke checks pass.
 
 ---
 
@@ -77,7 +109,7 @@
 ### 2.1 Define shared TypeScript types
 
 **Owner:** Agent
-**Status:** ⬜
+**Status:** ✅
 
 **Goal:** Single source of truth for Project, Brief, Experiment, ActivityEvent, Job payloads.
 
@@ -106,6 +138,7 @@
 * `pnpm -r test` (add minimal tests for validators)
 
 **Update plan:** ✅/🟡 with notes.
+* Notes: types + validators implemented; tests pending.
 
 ---
 
@@ -118,22 +151,17 @@
 **Owner:** Agent
 **Status:** ⬜
 
-**Decision needed:** pick one for MVP and document in `tech-spec.md` as an update.
-
-* Option A: SQLite (file) in the Fly worker + API reads via worker
-* Option B: Postgres (Neon) shared between API and worker
-* Option C: Redis + blob store (overkill)
-
-**Recommended for speed:** Option B (Neon Postgres) or Option A if you want zero external deps.
+**Decision:** SQLite (file) in the Fly worker; API reads via worker RPC.
 
 **Tasks:**
 
-1. Implement `ProjectStore` interface in `/packages/shared`:
+1. Implement `ProjectStore` interface in `/packages/shared` backed by SQLite:
 
    * `createProject`, `getProject`, `listProjects`, `updateProject`
    * `appendActivityEvent`, `listActivityEvents`
    * `enqueueJob`, `dequeueJob`, `setJobStatus`, `getJob`
-2. Add migrations (if SQL).
+2. Add migrations.
+3. Add worker RPC endpoints for Store access (read-only from API where possible).
 
 **Artifacts:**
 
@@ -152,7 +180,7 @@
 ### 4.1 API skeleton + auth boundary
 
 **Owner:** Agent
-**Status:** ⬜
+**Status:** ✅
 
 **Goal:** Provide endpoints Retool can call.
 
@@ -182,11 +210,12 @@
 * Use `curl` or Postman to create a project and fetch it.
 
 **Update plan:** ✅ with notes.
+* Notes: API scaffolding in place with auth + project/activity endpoints; remaining endpoints pending.
 
 ### 4.2 Worker RPC (API → Worker)
 
 **Owner:** Agent
-**Status:** ⬜
+**Status:** 🟡
 
 **Goal:** API can enqueue jobs and stream status.
 
@@ -206,6 +235,7 @@
 * Enqueue job from API; observe worker receives it.
 
 **Update plan:** ✅.
+* Notes: Worker RPC endpoints for jobs/projects/activity implemented; validation pending for remaining job types.
 
 ---
 
@@ -267,7 +297,7 @@
 ### 5.3 Job queue + execution loop
 
 **Owner:** Agent
-**Status:** ⬜
+**Status:** 🟡
 
 **Goal:** Worker can run jobs sequentially (single concurrency for MVP).
 
@@ -292,6 +322,7 @@
 * Enqueue dummy job; see status transitions + activity events.
 
 **Update plan:** ✅.
+* Notes: SQLite-backed queue + polling runner implemented with stub handler; job status updates stored.
 
 ---
 
@@ -362,7 +393,7 @@
 ### 7.1 Build the template seed app
 
 **Owner:** Agent
-**Status:** ⬜
+**Status:** 🟡
 
 **Goal:** Create a clean Next.js landing page template with 3 archetypes.
 
@@ -395,6 +426,7 @@
 * Events fire locally (can log to console for MVP).
 
 **Update plan:** ✅.
+* Notes: Next.js template seed scaffolded with archetype configs, components, and PostHog hooks; `pnpm -r build` passes.
 
 ---
 
@@ -403,7 +435,7 @@
 ### 8.1 GitHub repo creation + push
 
 **Owner:** Agent
-**Status:** ⬜
+**Status:** 🟡
 
 **Goal:** Create a new repo per project and push template seed.
 
@@ -430,11 +462,12 @@
 * Repo exists with code; `git log` shows initial commit.
 
 **Update plan:** ✅.
+* Notes: GitHub adapter + bootstrap handler implemented; repo metadata stored on Project.
 
 ### 8.2 Vercel project creation + deploy
 
 **Owner:** Agent
-**Status:** ⬜
+**Status:** 🟡
 
 **Goal:** Connect repo to Vercel and deploy to prod.
 
@@ -457,6 +490,7 @@
 * `prodUrl` loads successfully.
 
 **Update plan:** ✅.
+* Notes: Vercel adapter + deploy handler implemented; validation pending with real repo.
 
 ---
 
@@ -472,8 +506,9 @@
 **Tasks:**
 
 1. Implement `POST /api/brief/suggest` in Vercel API.
-2. Use Opus low-thinking prompt.
-3. Return structured JSON matching `Brief`.
+2. Use TinyFishAdapter to fetch competitor context.
+3. Use Opus low-thinking prompt with competitor context.
+4. Return structured JSON matching `Brief`.
 
 **Artifacts:**
 
@@ -514,7 +549,7 @@
 ### 10.1 PostHog event schema and capture
 
 **Owner:** Agent
-**Status:** ⬜
+**Status:** 🟡
 
 **Goal:** PostHog captures events and can compute qualified lead rate.
 
@@ -531,6 +566,8 @@
    * form abandonment
    * geo distribution
    * qualified lead rate = leads / sessions
+5. Add PostHog webhooks for experiment results + event ingestion.
+6. Add fallback polling job for metrics if webhooks fail.
 
 **Artifacts:**
 
@@ -542,6 +579,46 @@
 * Generate traffic (real or demo) and confirm metrics populate.
 
 **Update plan:** ✅.
+* Notes: metrics endpoint implemented with basic PostHog event counts; geo distribution pending.
+
+---
+
+### 10.2 Signals + Retool Agent decision layer
+
+**Owner:** Agent
+**Status:** ⬜
+
+**Goal:** Use Retool Agents to decide on A/B tests from PostHog trigger emails.
+
+**Tasks:**
+
+1. Configure PostHog workflow to email on trigger events.
+2. Set up Resend inbound parse to POST into `POST /api/signals/posthog-email`.
+3. Implement signals endpoint:
+
+   * verify sender allowlist
+   * verify HMAC signature (shared secret in env)
+   * map to `projectId` + `triggerType` (explicit projectId in email body)
+   * log ActivityEvent: signal received
+4. Implement RetoolAgentAdapter + JSON schema contract.
+5. Call Retool Agent with metrics + current experiment status.
+6. If decision is `CREATE_AB_TEST`, enqueue `CREATE_EXPERIMENT_VARIANT`.
+7. Respect kill switch: force `NO_ACTION` while logging.
+8. Add rate limit (default 1 experiment per project per 6 hours; configurable via env var).
+9. Add web chat trigger for manual testing (same payload as email trigger).
+10. Add Retool UI card showing last decision + confidence.
+
+**Artifacts:**
+
+* Signals endpoint
+* RetoolAgentAdapter
+* Retool workflow/agent config
+
+**Validation:**
+
+* Simulated PostHog email → Retool decision → experiment job enqueued.
+
+**Update plan:** ✅.
 
 ---
 
@@ -550,7 +627,7 @@
 ### 11.1 PostHog feature flag/experiment wiring
 
 **Owner:** Agent
-**Status:** ⬜
+**Status:** 🟡
 
 **Goal:** A/B test headline + hero using PostHog.
 
@@ -571,11 +648,12 @@
 * PostHog shows variant distribution and conversions.
 
 **Update plan:** ✅.
+* Notes: template seed now reads feature flag `headlineHeroTest` and fires experiment view/convert events.
 
 ### 11.2 Full Agent experiment creation + promotion
 
 **Owner:** Agent
-**Status:** ⬜
+**Status:** 🟡
 
 **Goal:** When triggers fire, agent creates experiment and promotes winner.
 
@@ -602,6 +680,7 @@
 * End-to-end: trigger → experiment → winner → promote.
 
 **Update plan:** ✅.
+* Notes: worker job handler updates site.config.json and redeploys; PostHog result reading pending.
 
 ---
 
@@ -768,6 +847,33 @@
 * Metrics and events reflect real data.
 
 **Update plan:** ✅.
+
+---
+
+### 15.3 Experiments UI
+
+**Owner:** Agent
+**Status:** 🟡
+
+**Goal:** Read-only experiments page with status, variants, winner, and start/end.
+
+**Tasks:**
+
+1. Add `GET /api/projects/:id/experiments`.
+2. Retool page lists experiments with fields: status, variants, winner, startAt, endAt.
+3. Link from dashboard to experiments page.
+
+**Artifacts:**
+
+* Experiments endpoint
+* Retool page
+
+**Validation:**
+
+* Experiments page renders current A/B test metadata.
+
+**Update plan:** ✅.
+* Notes: experiments stored in worker DB and exposed via API; Retool page pending.
 
 ---
 

@@ -25,6 +25,7 @@
 ## 2. Hard tech-stack decisions (locked)
 
 * **UI/Admin:** Retool (dashboard, setup wizard, activity feed)
+* **Decision layer:** Retool Agents (triggered via email/web chat)
 * **API/Orchestrator:** Vercel-hosted Node.js (TypeScript) API (serverless functions)
 * **Persistent worker:** Fly.io long-running Node service/container
 
@@ -48,6 +49,7 @@
 * **Assets:** Freepik API (hero + ad creatives)
 * **Email:** Resend
 * **Secrets:** .env per service + encrypted store
+* **State store (MVP):** SQLite in worker volume
 
 ---
 
@@ -63,7 +65,13 @@
    * Live activity feed
    * Demo Mode toggle
 
-2. **LaunchLoop Orchestrator (Node/TS)**
+2. **Retool Agent**
+
+   * Decision layer for trigger events
+   * Proposes headline + hero variants
+   * Calls LaunchLoop API to enqueue Cline-backed worker jobs
+
+3. **LaunchLoop Orchestrator (Node/TS)**
 
    * Auth + project state
    * Service connectors (GitHub, Vercel, PostHog, Yutori, Tonic, Freepik, Resend)
@@ -71,14 +79,14 @@
    * Trigger engine (heuristics)
    * Activity/event stream
 
-3. **Agent Runtime**
+4. **Agent Runtime**
 
    * Task planner
    * State machine (Launch → Measure → Diagnose → Experiment → Promote)
    * Tool adapters
    * Policy engine (Full Agent vs Recommendation-only)
 
-4. **Cline Worker**
+5. **Cline Worker**
 
    * Workspace manager
    * Repo bootstrap (templates)
@@ -86,11 +94,12 @@
    * Commit/PR handler
    * Build/test runner
 
-5. **Event Ingestion**
+6. **Event Ingestion**
 
-   * PostHog webhooks (experiment results)
-   * PostHog polling (metrics snapshots)
+* PostHog webhooks (experiment results)
+* PostHog polling (metrics snapshots; fallback if webhooks fail)
    * Demo Mode injector (Tonic)
+   * Resend inbound parse (PostHog trigger emails)
 
 ---
 
@@ -254,6 +263,7 @@ Each trigger produces:
 * `brief.json`
 * `assets.json` (hero image URLs)
 * `env.sample`
+* `competitors.json` (TinyFish scrape outputs)
 
 ### Actions
 
@@ -280,6 +290,33 @@ Each trigger produces:
 * **TonicAdapter**: generate sessions/leads/anomalies
 * **FreepikAdapter**: hero/ad creatives
 * **ResendAdapter**: emails
+* **ResendInboundAdapter**: parse PostHog trigger emails
+* **RetoolAgentAdapter**: decision requests + response handling
+* **TinyFishAdapter**: competitor research for brief + experiments
+
+---
+
+## 13. TinyFish minimal schema (MVP)
+
+```json
+{
+  "source": "tinyfish",
+  "queriedAt": "2025-01-16T00:00:00Z",
+  "query": "short product summary",
+  "competitors": [
+    {
+      "name": "Competitor A",
+      "url": "https://example.com",
+      "positioning": "1-2 sentence summary",
+      "headline": "Primary headline",
+      "cta": "Primary CTA",
+      "notes": "Optional differentiators",
+      "audienceTags": ["founders", "growth"],
+      "pricingCues": ["free trial", "per-seat"]
+    }
+  ]
+}
+```
 
 ---
 
